@@ -1,0 +1,117 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101827">
+  <title>Detroit ORMZ Jackpot</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #101827;
+      color: white;
+      text-align: center;
+      padding: 24px 16px;
+    }
+    .app {
+      max-width: 430px;
+      margin: 25px auto;
+      padding: 24px;
+      border: 1px solid #35445c;
+      border-radius: 20px;
+      background: #1c293c;
+    }
+    h1 { color: #f7c948; }
+    .coin { font-size: 52px; margin: 16px; }
+    .points {
+      font-size: 36px;
+      font-weight: bold;
+      color: #f7c948;
+      margin: 20px;
+    }
+    button {
+      width: 100%;
+      padding: 15px;
+      margin: 8px 0;
+      border: 0;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .earn { background: #f7c948; color: #101827; }
+    .bonus { background: #24c78e; color: #10251f; }
+    .reset { background: #35445c; color: white; }
+    p { line-height: 1.5; color: #d5deeb; }
+    footer { font-size: 12px; color: #aab6c8; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="coin">🎰</div>
+    <h1>DETROIT ORMZ</h1>
+    <h2>Jackpot</h2>
+    <p>Bienvenue dans votre application</p>
+
+    <p>Vos points</p>
+    <div class="points" id="points">1250</div>
+
+    <button class="earn" id="earn">🎯 Gagner 10 points</button>
+    <button class="bonus" id="bonus">🎁 Bonus +100 points</button>
+    <button class="reset" id="reset">Réinitialiser les points</button>
+
+    <p id="message">Bonne chance !</p>
+    <footer>
+      Prototype de démonstration — points virtuels uniquement.
+      Aucun paiement ni gain réel.
+    </footer>
+  </div>
+
+  <script>
+    const storageKey = "detroit-ormz-jackpot-points";
+    let points = 1250;
+
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved !== null && Number.isFinite(Number(saved))) {
+        points = Math.max(0, Number(saved));
+      }
+    } catch (e) {}
+
+    const display = document.getElementById("points");
+    const message = document.getElementById("message");
+
+    function render() {
+      display.textContent = points.toLocaleString("fr-FR");
+      try {
+        localStorage.setItem(storageKey, String(points));
+      } catch (e) {}
+    }
+
+    document.getElementById("earn").addEventListener("click", () => {
+      points += 10;
+      message.textContent = "Bravo ! Vous avez gagné 10 points virtuels.";
+      render();
+    });
+
+    document.getElementById("bonus").addEventListener("click", () => {
+      points += 100;
+      message.textContent = "Bonus de 100 points virtuels ajouté !";
+      render();
+    });
+
+    document.getElementById("reset").addEventListener("click", () => {
+      if (confirm("Voulez-vous vraiment remettre les points à zéro ?")) {
+        points = 0;
+        message.textContent = "Les points ont été réinitialisés.";
+        render();
+      }
+    });
+
+    render();
+  </script>
+</body>
+</html>
