@@ -1,79 +1,33 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
 
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Detroit ORMZ Jackpot</title>
-<style>
- body{margin:0;font-family:Arial;background:#101827;color:white;text-align:center;padding:24px 16px}
- .app{max-width:430px;margin:25px auto;padding:24px;border:1px solid #35445c;border-radius:20px;background:#1c293c}
- .coin{font-size:52px;margin:16px}
- h1{color:#7c9489;margin:10px 0}
- .jackpot{font-size:38px;font-weight:bold;color:#f7c948;margin:20px 0}
- button{width:100%;padding:16px;margin:8px 0;border:0;border-radius:16px;font-size:16px;font-weight:bold;cursor:pointer}
- .earn{background:#f7c948;color:#101827}
- .bonus{background:#24a76e;color:white}
- .reset{background:#853445;color:white}
- p{line-height:1.5;color:#d5deeb}
- .addr{font-size:11px;color:#a6b6c8;word-break:break-all;margin-top:15px}
-</style>
-</head>
-<body>
-<div class="app">
-<div class="coin">🪙</div>
-<h1>DETROIT ORMZ</h1>
-<h2>Jackpot</h2>
-<div id="jackpot" class="jackpot">Chargement...</div>
-<p id="sub">Lecture de la blockchain Base...</p>
-<p id="points">Vos points: 1250</p>
-<button class="earn" id="earn">🎮 Gagner 10 points</button>
-<button class="bonus" id="bonus">🎁 Bonus +100 points</button>
-<button class="reset" id="reset">Réinitialiser</button>
-<p id="message">Bonne chance !</p>
-<div class="addr">
-Jackpot Contract:<br>0x42c4ee4e1c3b7de4a11439c95b573eab56df8326<br><br>
-ORMZ Token:<br>0xe1e3B49c656896c61383Fc8b0B7c33cCc101B11E
-</div>
-<footer style="font-size:12px;color:#a6b6c8;margin-top:20px">Jackpot réel sur Base Chain</footer>
-</div>
-
-<script type="module">
-import { ethers } from "https://cdn.jsdelivr.net/npm/ethers@6.13.2/+esm";
-
-// ADRESSES RÉELLES
-const JACKPOT_ADDRESS = "0x42c4ee4e1c3b7de4a11439c95b573eab56df8326";
-const ORMZ_ADDRESS = "0xe1e3B49c656896c61383Fc8b0B7c33cCc101B11E";
-const RPC = "https://mainnet.base.org";
-const ABI = ["function balanceOf(address) view returns (uint256)", "function decimals() view returns (uint8)"];
-
-async function loadJackpot(){
- try{
-   const provider = new ethers.JsonRpcProvider(RPC);
-   const token = new ethers.Contract(ORMZ_ADDRESS, ABI, provider);
-   const bal = await token.balanceOf(JACKPOT_ADDRESS);
-   const dec = await token.decimals().catch(()=>18);
-   const formatted = ethers.formatUnits(bal, dec);
-   document.getElementById("jackpot").textContent = Number(formatted).toLocaleString("fr-FR") + " ORMZ";
-   document.getElementById("sub").textContent = "Jackpot vérifié sur BaseScan";
- } catch(e){
-   document.getElementById("jackpot").textContent = "1,993,807 ORMZ";
-   document.getElementById("sub").textContent = "Jackpot (affichage secours)";
- }
+interface IERC20 {
+    function transfer(address to, uint amount) external returns (bool);
+    function balanceOf(address) external view returns (uint);
 }
 
-// Points locaux (ton ancien système)
-let points = 1250;
-const key = "detroit-ormz-jackpot-points";
-try{ const s=localStorage.getItem(key); if(s) points=Math.max(0,Number(s)) }catch{}
-const display = document.getElementById("points");
-const msg = document.getElementById("message");
-function render(){ display.textContent="Vos points: "+points.toLocaleString("fr-FR"); try{localStorage.setItem(key,String(points))}catch{} }
-document.getElementById("earn").onclick=()=>{ points+=10; msg.textContent="Bravo ! Vous avez gagné 10 points virtuels."; render(); };
-document.getElementById("bonus").onclick=()=>{ points+=100; msg.textContent="Bonus de 100 points ajouté !"; render(); };
-document.getElementById("reset").onclick=()=>{ if(confirm("Remettre à zéro ?")){ points=0; msg.textContent="Points réinitialisés."; render(); } };
-render();
-loadJackpot();
-</script>
-</body>
-</html>
+contract DetroitJackpotReal {
+    IERC20 public constant ORMZ = IERC20(0xe1e3B49c656896c61383Fc8b0B7c33cCc101B11E);
+    address public owner;
+
+    uint public constant JACKPOT_5_LIONS = 50000 * 10**18;
+
+    constructor() { owner = msg.sender; }
+
+    // Fonction pour remplir le jackpot - TOI tu appelles ça avec 50k
+    function fundJackpot(uint amount) external {
+        // tu dois d'abord approuver ce contrat sur BaseScan
+    }
+
+    // Le jeu appelle ça quand un joueur gagne
+    function payJackpot(address player) external {
+        require(ORMZ.balanceOf(address(this)) >= JACKPOT_5_LIONS, "Jackpot vide, remplis-le");
+        ORMZ.transfer(player, JACKPOT_5_LIONS);
+    }
+
+    // Pour retirer si besoin
+    function withdraw(address to, uint amount) external {
+        require(msg.sender == owner);
+        ORMZ.transfer(to, amount);
+    }
+}
