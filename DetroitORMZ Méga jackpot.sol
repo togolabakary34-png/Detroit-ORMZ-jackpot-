@@ -1,185 +1,424 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0a0a0a">
+<title>DETROIT ORMZ MEGA JACKPOT</title>
 
- // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.9.0/dist/ethers.umd.min.js"></script>
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
-import "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
-
-contract DetroitORMZMegaJackpot is VRFConsumerBaseV2Plus {
-    using SafeERC20 for IERC20;
-
-    IERC20 public immutable ormz;
-    address public immutable owner;
-
-    uint256 public constant ENTRY_FEE = 100000 ether;
-    uint256 public constant PROJECT_FEE_BPS = 500;
-    uint256 public constant BPS = 10000;
-
-    uint256 public immutable subscriptionId;
-    bytes32 public constant KEY_HASH =
-        0x00b81b5a830cb0a4009fbd8904de511e28631e62ce5ad231373d3cdad373ccab;
-
-    uint16 public constant REQUEST_CONFIRMATIONS = 3;
-    uint32 public constant CALLBACK_GAS_LIMIT = 200000;
-
-    uint256 public roundId = 1;
-    uint256 public jackpot;
-    uint256 public projectFees;
-    uint256 public currentRequestId;
-
-    address[] public players;
-    mapping(address => uint256) public lastJoinedRound;
-    mapping(uint256 => uint256) public requestRound;
-
-    bool public drawing;
-    bool public paused;
-
-    event PlayerJoined(address indexed player);
-    event PointsAwarded(address indexed player, uint256 amount);
-    event DrawRequested(uint256 indexed requestId, uint256 indexed round);
-    event WinnerSelected(
-        uint256 indexed round,
-        address indexed winner,
-        uint256 prize
-    );
-    event FeesWithdrawn(address indexed recipient, uint256 amount);
-    event PauseChanged(bool paused);
-
-    modifier onlyOwner() {
-        require(msg.sender == owner, "Owner only");
-        _;
-    }
-
-    constructor(uint256 _subscriptionId)
-        VRFConsumerBaseV2Plus(
-            0xd5D517aBE5cF79B7e95eC98dB0f0277788aFF634
-        )
-    {
-        owner = msg.sender;
-        ormz = IERC20(
-            0xe1e3B49c656896c61383Fc8b0B7c33cCc101B11E
-        );
-        subscriptionId = _subscriptionId;
-    }
-
-    function join() external {
-        require(!paused, "Jackpot paused");
-        require(!drawing, "Draw in progress");
-        require(
-            lastJoinedRound[msg.sender] != roundId,
-            "Already joined"
-        );
-
-        uint256 fee = (ENTRY_FEE * PROJECT_FEE_BPS) / BPS;
-        uint256 prizeContribution = ENTRY_FEE - fee;
-
-        ormz.safeTransferFrom(
-            msg.sender,
-            address(this),
-            ENTRY_FEE
-        );
-
-        projectFees += fee;
-        jackpot += prizeContribution;
-        lastJoinedRound[msg.sender] = roundId;
-        players.push(msg.sender);
-
-        emit PlayerJoined(msg.sender);
-        emit PointsAwarded(msg.sender, ENTRY_FEE);
-    }
-
-    function requestDraw() external onlyOwner {
-        require(!paused, "Jackpot paused");
-        require(!drawing, "Draw already in progress");
-        require(players.length >= 2, "Need at least 2 players");
-        require(jackpot > 0, "Empty jackpot");
-
-        drawing = true;
-
-        uint256 requestId = s_vrfCoordinator
-            .requestRandomWords(
-                VRFV2PlusClient.RandomWordsRequest({
-                    keyHash: KEY_HASH,
-                    subId: subscriptionId,
-                    requestConfirmations: REQUEST_CONFIRMATIONS,
-                    callbackGasLimit: CALLBACK_GAS_LIMIT,
-                    numWords: 1,
-                    extraArgs: VRFV2PlusClient._argsToBytes(
-                        VRFV2PlusClient.ExtraArgsV1({
-                            nativePayment: true
-                        })
-                    )
-                })
-            );
-
-        currentRequestId = requestId;
-        requestRound[requestId] = roundId;
-
-        emit DrawRequested(requestId, roundId);
-    }
-
-    function fulfillRandomWords(
-        uint256 requestId,
-        uint256[] calldata randomWords
-    ) internal override {
-        if (
-            !drawing ||
-            requestId != currentRequestId ||
-            requestRound[requestId] != roundId ||
-            players.length < 2 ||
-            randomWords.length == 0
-        ) {
-            return;
-        }
-
-        uint256 winningRound = roundId;
-        uint256 winnerIndex = randomWords[0] % players.length;
-        address winner = players[winnerIndex];
-        uint256 prize = jackpot;
-
-        // Update state before transferring tokens.
-        delete players;
-        jackpot = 0;
-        drawing = false;
-        currentRequestId = 0;
-        roundId++;
-
-        ormz.safeTransfer(winner, prize);
-
-        emit WinnerSelected(winningRound, winner, prize);
-    }
-
-    function withdrawProjectFees(
-        address recipient,
-        uint256 amount
-    ) external onlyOwner {
-        require(recipient != address(0), "Zero recipient");
-        require(!drawing, "Draw in progress");
-        require(amount <= projectFees, "Exceeds fees");
-
-        projectFees -= amount;
-        ormz.safeTransfer(recipient, amount);
-
-        emit FeesWithdrawn(recipient, amount);
-    }
-
-    function setPaused(bool value) external onlyOwner {
-        require(!drawing || value, "Draw in progress");
-        paused = value;
-        emit PauseChanged(value);
-    }
-
-    function getPlayers()
-        external
-        view
-        returns (address[] memory)
-    {
-        return players;
-    }
-
-    function playerCount() external view returns (uint256) {
-        return players.length;
-    }
+<style>
+body {
+  background:#0a0a0a;
+  color:#fff;
+  font-family:Arial,sans-serif;
+  text-align:center;
+  padding:20px;
 }
+.card {
+  background:#1a1a1a;
+  border:2px solid #ff0033;
+  border-radius:20px;
+  padding:25px;
+  max-width:500px;
+  margin:20px auto;
+  overflow-wrap:anywhere;
+}
+h1 { color:#ff0033; }
+.jackpot {
+  font-size:clamp(26px,7vw,38px);
+  color:#00ff88;
+  font-weight:bold;
+  margin:15px 0;
+}
+.usd { font-size:20px; }
+.btn {
+  display:block;
+  box-sizing:border-box;
+  padding:16px;
+  border-radius:30px;
+  text-decoration:none;
+  margin-top:15px;
+  font-weight:bold;
+  font-size:18px;
+  cursor:pointer;
+  border:none;
+  width:100%;
+}
+.btn:disabled { opacity:.45; cursor:not-allowed; }
+.blue { background:#00f0ff;color:#000; }
+.red { background:#ff0033;color:#fff; }
+.green { background:#00ff88;color:#000; }
+.small { font-size:12px;color:#aaa;margin-top:10px; }
+.status { color:#00f0ff;overflow-wrap:anywhere; }
+</style>
+</head>
+
+<body>
+<h1>DETROIT ORMZ</h1>
+
+<div class="card">
+  <p>🔴 BASE MAINNET</p>
+
+  <p>Prix indicatif : <span id="price">Indisponible</span></p>
+
+  <div class="jackpot" id="jackpot">
+    51,313,431 ORMZ
+  </div>
+
+  <div class="usd" id="usd">
+    Valeur indicative non vérifiée
+  </div>
+
+  <p class="small">
+    Cagnotte indicative : le montant réel doit être lu depuis
+    le contrat Jackpot déployé.
+  </p>
+
+  <p id="walletInfo" class="small">Wallet non connecté</p>
+  <p id="ormzBal" class="small"></p>
+  <p id="status" class="status small">Prêt à connecter le wallet.</p>
+
+  <button id="connectBtn" class="btn blue">
+    🔗 CONNECTER WALLET
+  </button>
+
+  <button id="playBtn" class="btn red" disabled>
+    🎮 JOUER - 100,000 ORMZ
+  </button>
+
+  <p class="small">
+    Token ORMZ :
+    <br>
+    0xe1e3B49c656896c61383Fc8b0B7c33cCc101B11E
+    <br>
+    Réseau : Base Mainnet — Chain ID 8453
+  </p>
+
+  <a class="btn blue"
+     href="https://basescan.org/token/0xe1e3B49c656896c61383Fc8b0B7c33cCc101B11E"
+     target="_blank"
+     rel="noopener noreferrer">
+    VOIR LE TOKEN SUR BASESCAN
+  </a>
+
+  <a class="btn green"
+     href="https://ormz.vercel.app/">
+    SITE DETROIT ORMZ
+  </a>
+</div>
+
+<script>
+"use strict";
+
+// TOKEN ERC-20 ORMZ — Base Mainnet
+const TOKEN = "0xe1e3B49c656896c61383Fc8b0B7c33cCc101B11E";
+const BASE_CHAIN_ID = 8453;
+
+// À renseigner uniquement après le vrai déploiement.
+// Ne pas mettre l'adresse du token à la place du Jackpot.
+const JACKPOT_ADDRESS = "";
+
+const TOKEN_ABI = [
+  "function balanceOf(address) view returns (uint256)",
+  "function decimals() view returns (uint8)"
+];
+
+// ABI Jackpot à adapter au contrat réellement déployé.
+// Ne pas supposer que play() existe avant vérification.
+const JACKPOT_ABI = [
+  "function play() external"
+];
+
+let provider = null;
+let signer = null;
+let userAddr = null;
+
+const $ = id => document.getElementById(id);
+
+function setStatus(message) {
+  $("status").textContent = message;
+}
+
+function shortAddress(address) {
+  return address.slice(0, 6) + "..." + address.slice(-4);
+}
+
+async function getBaseProvider() {
+  if (!window.ethereum) {
+    throw new Error(
+      "MetaMask introuvable. Ouvre cette page dans le navigateur MetaMask."
+    );
+  }
+
+  // Demande les comptes avant de créer le signer.
+  await window.ethereum.request({
+    method: "eth_requestAccounts"
+  });
+
+  let chainId = await window.ethereum.request({
+    method: "eth_chainId"
+  });
+
+  if (parseInt(chainId, 16) !== BASE_CHAIN_ID) {
+    try {
+      await window.ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: "0x2105" }]
+      });
+    } catch (error) {
+      if (error.code === 4902) {
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [{
+            chainId: "0x2105",
+            chainName: "Base Mainnet",
+            nativeCurrency: {
+              name: "Ether",
+              symbol: "ETH",
+              decimals: 18
+            },
+            rpcUrls: ["https://mainnet.base.org"],
+            blockExplorerUrls: ["https://basescan.org"]
+          }]
+        });
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  // Vérifie le réseau après le changement.
+  chainId = await window.ethereum.request({
+    method: "eth_chainId"
+  });
+
+  if (parseInt(chainId, 16) !== BASE_CHAIN_ID) {
+    throw new Error("Sélectionne Base Mainnet dans MetaMask.");
+  }
+
+  provider = new ethers.BrowserProvider(window.ethereum);
+  signer = await provider.getSigner();
+  userAddr = await signer.getAddress();
+}
+
+async function loadBalance() {
+  const token = new ethers.Contract(
+    TOKEN,
+    TOKEN_ABI,
+    provider
+  );
+
+  const [balance, decimals] = await Promise.all([
+    token.balanceOf(userAddr),
+    token.decimals()
+  ]);
+
+  const formatted = ethers.formatUnits(balance, decimals);
+
+  $("ormzBal").textContent =
+    "Solde ORMZ : " +
+    Number(formatted).toLocaleString("fr-FR", {
+      maximumFractionDigits: 4
+    }) +
+    " ORMZ";
+}
+
+async function connectWallet() {
+  $("connectBtn").disabled = true;
+  setStatus("Connexion en cours...");
+
+  try {
+    await getBaseProvider();
+
+    $("walletInfo").textContent =
+      "Connecté : " + shortAddress(userAddr);
+
+    await loadBalance();
+
+    $("connectBtn").textContent = "WALLET CONNECTÉ";
+    setStatus("MetaMask connecté sur Base Mainnet.");
+
+    // Le jeu reste désactivé tant que le contrat n'est pas configuré.
+    $("playBtn").disabled = true;
+
+    if (!ethers.isAddress(JACKPOT_ADDRESS)) {
+      setStatus(
+        "Wallet connecté. Le jeu attend l'adresse du vrai contrat Jackpot."
+      );
+    }
+  } catch (error) {
+    signer = null;
+    userAddr = null;
+
+    $("walletInfo").textContent = "Wallet non connecté";
+    $("ormzBal").textContent = "";
+
+    setStatus(error.shortMessage || error.message || "Connexion impossible.");
+  } finally {
+    $("connectBtn").disabled = false;
+  }
+}
+
+async function loadPrice() {
+  try {
+    const response = await fetch(
+      "https://api.dexscreener.com/latest/dex/tokens/" + TOKEN
+    );
+
+    if (!response.ok) {
+      throw new Error("Prix indisponible");
+    }
+
+    const data = await response.json();
+
+    const pairs = (data.pairs || []).filter(pair =>
+      pair.chainId === "base" &&
+      Number(pair.priceUsd) > 0
+    );
+
+    // Choisit la paire Base ayant la plus grande liquidité déclarée.
+    pairs.sort((a, b) =>
+      Number(b.liquidity?.usd || 0) -
+      Number(a.liquidity?.usd || 0)
+    );
+
+    if (!pairs.length) {
+      $("price").textContent = "Indisponible";
+      $("usd").textContent = "Aucune cotation Base vérifiée";
+      return;
+    }
+
+    const price = Number(pairs[0].priceUsd);
+
+    $("price").textContent = "$" + price.toPrecision(6);
+
+    // Estimation uniquement, pas une cagnotte blockchain confirmée.
+    const displayedAmount = 51313431;
+    $("usd").textContent =
+      "Valeur indicative du montant affiché : $" +
+      (displayedAmount * price).toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+  } catch (error) {
+    $("price").textContent = "Indisponible";
+    $("usd").textContent = "Impossible de récupérer la cotation.";
+  }
+}
+
+async function jouer() {
+  if (!signer) {
+    setStatus("Connecte d'abord ton wallet.");
+    return;
+  }
+
+  if (!ethers.isAddress(JACKPOT_ADDRESS)) {
+    setStatus(
+      "Jeu désactivé : le contrat Jackpot doit être déployé et vérifié."
+    );
+    return;
+  }
+
+  $("playBtn").disabled = true;
+
+  try {
+    const network = await provider.getNetwork();
+
+    if (network.chainId !== BigInt(BASE_CHAIN_ID)) {
+      throw new Error("Le wallet doit être connecté à Base Mainnet.");
+    }
+
+    const code = await provider.getCode(JACKPOT_ADDRESS);
+
+    if (code === "0x") {
+      throw new Error(
+        "Aucun code de contrat à cette adresse sur Base Mainnet."
+      );
+    }
+
+    const jackpot = new ethers.Contract(
+      JACKPOT_ADDRESS,
+      JACKPOT_ABI,
+      signer
+    );
+
+    setStatus("Vérification de l'appel au contrat...");
+
+    // Simulation : aucune transaction n'est envoyée ici.
+    await jackpot.play.staticCall();
+
+    setStatus("Confirme la transaction dans MetaMask.");
+
+    const tx = await jackpot.play();
+
+    setStatus("Transaction envoyée : " + tx.hash);
+
+    const link = document.createElement("a");
+    link.href = "https://basescan.org/tx/" + tx.hash;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = "Voir la transaction sur BaseScan";
+    link.className = "small";
+    link.style.display = "block";
+    $("status").appendChild(link);
+
+    const receipt = await tx.wait();
+
+    if (!receipt || receipt.status !== 1) {
+      throw new Error("Transaction échouée.");
+    }
+
+    setStatus(
+      "Transaction confirmée sur Base Mainnet. Bloc : " +
+      receipt.blockNumber
+    );
+
+    await loadBalance();
+
+  } catch (error) {
+    setStatus(
+      error.shortMessage ||
+      error.reason ||
+      error.message ||
+      "Échec de la transaction."
+    );
+  } finally {
+    $("playBtn").disabled = false;
+  }
+}
+
+$("connectBtn").addEventListener("click", connectWallet);
+$("playBtn").addEventListener("click", jouer);
+
+loadPrice();
+
+// Suivi des changements de compte et de réseau.
+if (window.ethereum) {
+  window.ethereum.on("accountsChanged", () => {
+    signer = null;
+    provider = null;
+    userAddr = null;
+
+    $("walletInfo").textContent = "Reconnecte ton wallet.";
+    $("ormzBal").textContent = "";
+    $("connectBtn").textContent = "🔗 CONNECTER WALLET";
+    $("playBtn").disabled = true;
+
+    setStatus("Compte modifié. Reconnecte ton wallet.");
+  });
+
+  window.ethereum.on("chainChanged", () => {
+    signer = null;
+    provider = null;
+    userAddr = null;
+
+    $("playBtn").disabled = true;
+    $("walletInfo").textContent = "Vérification du réseau nécessaire.";
+
+    setStatus("Réseau modifié. Reconnecte ton wallet.");
+  });
+}
+</script>
+</body>
